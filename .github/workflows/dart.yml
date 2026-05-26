@@ -1,0 +1,51 @@
+name: CI Checks - Dart Tests
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-dart:
+    runs-on: ubuntu-latest
+
+    env:
+      LDK_NODE_DART_DIR: bindings/dart
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Dart SDK
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - name: Set default Rust version to stable
+        run: rustup default stable
+
+      - name: Generate Dart bindings
+        run: ./scripts/uniffi_bindgen_generate_dart.sh
+
+      - name: Install Dart dependencies
+        run: |
+          cd $LDK_NODE_DART_DIR
+          dart pub get
+
+      - name: Run Dart smoke tests
+        run: |
+          cd $LDK_NODE_DART_DIR
+          dart test test/ldk_node_test.dart -r expanded
+
+      - name: Start bitcoind and electrs
+        run: docker compose -p ldk-node -f tests/docker/docker-compose.yml up -d
+
+      - name: Run Dart integration tests
+        env:
+          BITCOIND_RPC_USER: "user"
+          BITCOIND_RPC_PASSWORD: "pass"
+          ESPLORA_ENDPOINT: "http://127.0.0.1:3002"
+        run: |
+          cd $LDK_NODE_DART_DIR
+          dart test test/integration_test.dart -r expanded

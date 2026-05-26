@@ -1,0 +1,3 @@
+[bindings.dart]
+cdylib_name = "ldk_node_dart"
+package_name = "ldk_node"

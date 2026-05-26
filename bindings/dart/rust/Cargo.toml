@@ -1,0 +1,38 @@
+[package]
+name = "ldk_node_dart"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Dart FFI wrapper crate for ldk-node, used by Dart's native assets hook."
+
+[lib]
+crate-type = ["staticlib", "cdylib"]
+name = "ldk_node_dart"
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "uniffi-bindgen.rs"
+
+[dependencies]
+# Re-export ldk-node with the `uniffi` feature so the proc-macro derives expand
+# and emit `UNIFFI_META_*` symbols + scaffolding into the cdylib that the
+# native-assets hook ships to consumers.
+ldk-node = { path = "../../..", features = ["uniffi"] }
+
+# Bindgen-only deps (used by `[[bin]] uniffi-bindgen`, not by the cdylib).
+# Pinned to =0.31.1 to match `uniffi-dart`'s required uniffi-rs version.
+uniffi = { version = "=0.31.1", features = ["cli"] }
+# Direct access to `BindgenCrateConfigSupplier` so we can resolve the
+# canonical `bindings/ldk_node.udl` from outside any crate's `src/`,
+# avoiding a symlink in the upstream ldk-node crate.
+uniffi_bindgen = "=0.31.1"
+uniffi-dart = { git = "https://github.com/Uniffi-Dart/uniffi-dart", tag = "v0.2.0+v0.31.1" }
+camino = "1.2"
+# `anyhow::Result` is the error type on the `BindgenCrateConfigSupplier` trait
+# methods; needed to implement the trait.
+anyhow = "1"
+# Used to deserialise `uniffi.toml` inside the supplier's `get_toml`.
+# Pinned to 0.9 to match `uniffi_bindgen`'s transitive dep — a different
+# major version produces an incompatible `toml::value::Table` at the trait
+# boundary.
+toml = "0.9"
